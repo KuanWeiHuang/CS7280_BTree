@@ -87,9 +87,10 @@ final class Btree {
 
     while (q.size() > 0) {
       int levelSize = q.size();
-      StringBuilder sb1 = new StringBuilder();
-      StringBuilder sb2 = new StringBuilder();
+      StringBuilder sb1 = new StringBuilder(); // string builder for node number line
+      StringBuilder sb2 = new StringBuilder(); // string builder for node structure line
 
+      // traverse the Btree level by level
       for (int i = 0; i < levelSize; i++) {
         int nodeIndex = q.remove();
         currentNode = nodes[nodeIndex];
