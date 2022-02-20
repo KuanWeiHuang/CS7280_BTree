@@ -75,6 +75,7 @@ final class Btree {
   public void Display(int node) {
     Node currentNode;
 
+    // using BFS to display the B tree level by level
     Queue<Integer> q = new LinkedList<>();
     q.add(node);
 
@@ -86,6 +87,7 @@ final class Btree {
       for (int i = 0; i < levelSize; i++) {
         int nodeIndex = q.remove();
         currentNode = nodes[nodeIndex];
+        // If it's leaf node, children will not be printed
         if (isLeaf(currentNode)) {
           sb1.append("{        Node ").append(nodeIndex).append("       }");
           sb2.append("{|");
@@ -109,27 +111,27 @@ final class Btree {
       }
       System.out.println(sb1.toString());
       System.out.println(sb2.toString());
-      System.out.println("-".repeat(50));
+      System.out.println("-".repeat(50)); // the separation line between levels
     }
   }
 
   private void DisplayNode(int node) {
     Node currentNode = nodes[node];
     if (isLeaf(currentNode)) {
-      System.out.printf("        Node %d       \n|", node);
+      System.out.printf("{        Node %d       }\n{|", node);
       for (int i = 0; i < currentNode.size; i++) {
         System.out.printf(" %d |", currentNode.values[i]);
       }
       int sizeLeft = NODESIZE - currentNode.size;
-      System.out.print("   |".repeat(sizeLeft) + "\n");
+      System.out.print("   |".repeat(sizeLeft) + "}\n");
     } else {
-      System.out.printf("            Node %d            \n|", node);
+      System.out.printf("{            Node %d            }\n{|", node);
       for (int i = 0; i < currentNode.size; i++) {
         System.out.printf("%d| %d |", currentNode.children[i], currentNode.values[i]);
       }
       System.out.printf("%d|", currentNode.children[currentNode.size]);
       int sizeLeft = NODESIZE - currentNode.size;
-      System.out.print("   | |".repeat(sizeLeft) + "\n");
+      System.out.print("   | |".repeat(sizeLeft) + "}\n");
     }
   }
   /*********** B-tree functions for Internal  ******************/
@@ -143,15 +145,16 @@ final class Btree {
     Node currentNode = nodes[pointer];
 
     // check if the value equals to existing values
+    // if the element is already greater than the value,
     // we can stop earlier since the array is sorted
     for (int i = 0; i < currentNode.size; i++) {
       if (value == currentNode.values[i]) {
         return true;
       }
       if (value < currentNode.values[i]) {
-        if (isLeaf(currentNode)) {
+        if (isLeaf(currentNode)) { // the node is leaf and we cannot go to next level to find the value
           return false;
-        } else {
+        } else { // go to the child pointer left to the first key value which greater than the target value
           return nodeLookup(value, currentNode.children[i]);
         }
       }
@@ -160,20 +163,16 @@ final class Btree {
     if (isLeaf(currentNode)) {
       return false;
     }
-
-    if (currentNode.size == 0) {
-      return nodeLookup(value, currentNode.children[0]);
-    }
     
     return nodeLookup(value, currentNode.children[currentNode.size]);
   }
 
   /*
    * nodeInsert(int value, int pointer)
-   *    - returned int array [status, new node pointer, middle value]
+   *    return:
    *    - -2 if the value already exists in the specified node
    *    - -1 if the value is inserted into the node and no more executions needed
-   *    - new node index (>0) if the value is inserted into the node and new node is created
+   *    - new node index (> 0) if the value is inserted into the node and new node is created
    */
   private int nodeInsert(int value, int pointer) {
     Node currentNode = nodes[pointer];
@@ -187,13 +186,16 @@ final class Btree {
         Arrays.sort(currentNode.values, 0, currentNode.size);
         return -1;
       } else { // if the leaf has no space, split the node and uplift the middle value to parent
+        // insert the value to a new temp array and sort it
         int[] temp = new int[NODESIZE + 1];
         System.arraycopy(currentNode.values, 0, temp, 0, NODESIZE);
         temp[NODESIZE] = value;
         Arrays.sort(temp);
 
-        currentNode.size = MIDDLE;
+        currentNode.size = MIDDLE; // decrease the original node size to MIDDLE (NODESIZE / 2)
+        // copy the sorted values into original value including the middle value which will be used after returning to upper level
         System.arraycopy(temp, 0, currentNode.values, 0, MIDDLE + 1);
+        // create a new leaf and put the sorted value greater than middle value
         int newLeafIndex = createLeaf();
         Node newLeaf = nodes[newLeafIndex];
         int j = 0;
@@ -201,17 +203,15 @@ final class Btree {
           newLeaf.values[j++] = temp[i];
           newLeaf.size++;
         }
-//        newLeaf.values[j] = temp[MIDDLE];
 
         return newLeafIndex;
       }
     }
 
-
-    // find the leaf node that the value should be inserted into
+    // if current node is not leaf, go to the next level to insert the value
     int childIndex = -1;
     for (int i = 0; i < currentNode.size; i++) {
-      if (value == currentNode.values[i]) {
+      if (value == currentNode.values[i]) { // if the value is already in the node, return -2
         return -2;
       }
       if (value < currentNode.values[i]) {
@@ -219,12 +219,9 @@ final class Btree {
         break;
       }
     }
+    // set the childIndex if it's not set during iteration
     if (childIndex == -1) {
-      if (currentNode.size == 0) {
-        childIndex = 0;
-      } else {
         childIndex = currentNode.size;
-      }
     }
 
     int status = nodeInsert(value, currentNode.children[childIndex]);
@@ -232,24 +229,27 @@ final class Btree {
       return status;
     } else {
       int childPointer = status;
+      // get the middle value from the original child
       Node originalChild = nodes[currentNode.children[childIndex]];
       int middleValue = originalChild.values[MIDDLE];
 
-      // has space
+      // if current node has space
       if (currentNode.size < NODESIZE) {
+        // move the values greater than middle value to the right by 1 slot
         for (int j = currentNode.size; j > childIndex; j--) {
           currentNode.values[j] = currentNode.values[j - 1];
         }
         currentNode.values[childIndex] = middleValue;
         currentNode.size++;
-
+        // move the children pointer next to middle value to the right by 1 slot
         for (int j = currentNode.size; j > childIndex + 1; j--) {
           currentNode.children[j] = currentNode.children[j - 1];
         }
         currentNode.children[childIndex + 1] = childPointer;
 
         return -1;
-      } else { // no space
+      } else { // current node has no space
+        // create temp arrays to store one more element
         int[] tempValues = new int[NODESIZE + 1];
         int[] tempChildren = new int[NODESIZE + 2];
         int i = 0;
@@ -268,7 +268,10 @@ final class Btree {
           i++;
         }
 
+        // decrease current node's size to MIDDLE
         currentNode.size = MIDDLE;
+
+        // create a new node with values greater than middle value and child pointers next to middle value
         int newNodeIndex = initNode();
         Node newNode = nodes[newNodeIndex];
         int j = 0;
@@ -282,7 +285,7 @@ final class Btree {
 
         if (pointer != root) {
           return newNodeIndex;
-        } else {
+        } else { // special case: if the current node is root, we have to create a new root to store the middle value
           int newRootIndex = initNode();
           Node newRoot = nodes[newRootIndex];
           newRoot.values[0] = tempValues[MIDDLE];
@@ -297,8 +300,10 @@ final class Btree {
   }
 
   /*
-   *  find target value in a integer array
-   *  - return True if the value is found
+   *  findValue(int[] values, int target, int size)
+   *    find target value in a integer array
+   *    - return True if the value is found
+   *    - else return False
    */
   private boolean findValue(int[] values, int target, int size) {
     for(int i = 0; i < size; i++) {
