@@ -9,10 +9,16 @@
  *
  */
 
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.Queue;
+
 final class Btree {
 
   /* Size of Node. */
   private static final int NODESIZE = 5;
+
+  private static final int MIDDLE = NODESIZE / 2;
 
   /* Node array, initialized with length = 1. i.e. root node */
   private Node[] nodes = new Node[1];
@@ -27,10 +33,10 @@ final class Btree {
   private int cntValues;
 
   /*
-   * B+ tree Constructor.
+   * B tree Constructor.
    */
   public Btree() {
-    root = iniNode();
+    root = initNode();
     nodes[root].children[0] = createLeaf();
   }
 
@@ -62,35 +68,248 @@ final class Btree {
     return cntValues;
   }
 
+  /*
+   * Display(int node)
+   *    - Display the values and children of the node
+   */
+  public void Display(int node) {
+    Node currentNode;
+
+    Queue<Integer> q = new LinkedList<>();
+    q.add(node);
+
+    while (q.size() > 0) {
+      int levelSize = q.size();
+      StringBuilder sb1 = new StringBuilder();
+      StringBuilder sb2 = new StringBuilder();
+
+      for (int i = 0; i < levelSize; i++) {
+        int nodeIndex = q.remove();
+        currentNode = nodes[nodeIndex];
+        if (isLeaf(currentNode)) {
+          sb1.append("{        Node ").append(nodeIndex).append("       }");
+          sb2.append("{|");
+          for (int j = 0; j < currentNode.size; j++) {
+            sb2.append(" ").append(currentNode.values[j]).append(" |");
+          }
+          int sizeLeft = NODESIZE - currentNode.size;
+          sb2.append("   |".repeat(sizeLeft)).append("}");
+        } else {
+          sb1.append("{             Node ").append(nodeIndex).append("              }");
+          sb2.append("{|");
+          for (int j = 0; j < currentNode.size; j++) {
+            sb2.append(currentNode.children[j]).append("| ").append(currentNode.values[j]).append(" |");
+            q.add(currentNode.children[j]);
+          }
+          sb2.append(currentNode.children[currentNode.size]).append("|");
+          q.add(currentNode.children[currentNode.size]);
+          int sizeLeft = NODESIZE - currentNode.size;
+          sb2.append("   | |".repeat(sizeLeft)).append("}");
+        }
+      }
+      System.out.println(sb1.toString());
+      System.out.println(sb2.toString());
+      System.out.println("-".repeat(50));
+    }
+  }
+
+  private void DisplayNode(int node) {
+    Node currentNode = nodes[node];
+    if (isLeaf(currentNode)) {
+      System.out.printf("        Node %d       \n|", node);
+      for (int i = 0; i < currentNode.size; i++) {
+        System.out.printf(" %d |", currentNode.values[i]);
+      }
+      int sizeLeft = NODESIZE - currentNode.size;
+      System.out.print("   |".repeat(sizeLeft) + "\n");
+    } else {
+      System.out.printf("            Node %d            \n|", node);
+      for (int i = 0; i < currentNode.size; i++) {
+        System.out.printf("%d| %d |", currentNode.children[i], currentNode.values[i]);
+      }
+      System.out.printf("%d|", currentNode.children[currentNode.size]);
+      int sizeLeft = NODESIZE - currentNode.size;
+      System.out.print("   | |".repeat(sizeLeft) + "\n");
+    }
+  }
   /*********** B-tree functions for Internal  ******************/
 
   /*
    * nodeLookup(int value, int pointer)
    *    - True if the value was found in the specified node.
-   *
+   *    - False otherwise
    */
   private boolean nodeLookup(int value, int pointer) {
-    //
-    //
-    // To be coded .................
-    //
-    //
-    return XXX;
+    Node currentNode = nodes[pointer];
+
+    // check if the value equals to existing values
+    // we can stop earlier since the array is sorted
+    for (int i = 0; i < currentNode.size; i++) {
+      if (value == currentNode.values[i]) {
+        return true;
+      }
+      if (value < currentNode.values[i]) {
+        if (isLeaf(currentNode)) {
+          return false;
+        } else {
+          return nodeLookup(value, currentNode.children[i]);
+        }
+      }
+    }
+
+    if (isLeaf(currentNode)) {
+      return false;
+    }
+
+    if (currentNode.size == 0) {
+      return nodeLookup(value, currentNode.children[0]);
+    }
+    
+    return nodeLookup(value, currentNode.children[currentNode.size]);
   }
 
   /*
    * nodeInsert(int value, int pointer)
+   *    - returned int array [status, new node pointer, middle value]
    *    - -2 if the value already exists in the specified node
-   *    - -1 if the value is inserted into the node or
-   *            something else if the parent node has to be restructured
+   *    - -1 if the value is inserted into the node and no more executions needed
+   *    - new node index (>0) if the value is inserted into the node and new node is created
    */
   private int nodeInsert(int value, int pointer) {
-    //
-    //
-    // To be coded .................
-    //
-    //
-    return XXX;
+    Node currentNode = nodes[pointer];
+    // Base case: the node is leaf node
+    if (isLeaf(currentNode)) {
+      // if the value already exists, don't insert it and return -2
+      if (findValue(currentNode.values, value, currentNode.size)) {
+        return  -2;
+      } else if (currentNode.size < NODESIZE) { // if the leaf has spaces, insert the value and sort the array
+        currentNode.values[currentNode.size++] = value;
+        Arrays.sort(currentNode.values, 0, currentNode.size);
+        return -1;
+      } else { // if the leaf has no space, split the node and uplift the middle value to parent
+        int[] temp = new int[NODESIZE + 1];
+        System.arraycopy(currentNode.values, 0, temp, 0, NODESIZE);
+        temp[NODESIZE] = value;
+        Arrays.sort(temp);
+
+        currentNode.size = MIDDLE;
+        System.arraycopy(temp, 0, currentNode.values, 0, MIDDLE + 1);
+        int newLeafIndex = createLeaf();
+        Node newLeaf = nodes[newLeafIndex];
+        int j = 0;
+        for (int i = MIDDLE + 1; i <= NODESIZE; i++) {
+          newLeaf.values[j++] = temp[i];
+          newLeaf.size++;
+        }
+//        newLeaf.values[j] = temp[MIDDLE];
+
+        return newLeafIndex;
+      }
+    }
+
+
+    // find the leaf node that the value should be inserted into
+    int childIndex = -1;
+    for (int i = 0; i < currentNode.size; i++) {
+      if (value == currentNode.values[i]) {
+        return -2;
+      }
+      if (value < currentNode.values[i]) {
+        childIndex = i;
+        break;
+      }
+    }
+    if (childIndex == -1) {
+      if (currentNode.size == 0) {
+        childIndex = 0;
+      } else {
+        childIndex = currentNode.size;
+      }
+    }
+
+    int status = nodeInsert(value, currentNode.children[childIndex]);
+    if (status < 0) {
+      return status;
+    } else {
+      int childPointer = status;
+      Node originalChild = nodes[currentNode.children[childIndex]];
+      int middleValue = originalChild.values[MIDDLE];
+
+      // has space
+      if (currentNode.size < NODESIZE) {
+        for (int j = currentNode.size; j > childIndex; j--) {
+          currentNode.values[j] = currentNode.values[j - 1];
+        }
+        currentNode.values[childIndex] = middleValue;
+        currentNode.size++;
+
+        for (int j = currentNode.size; j > childIndex + 1; j--) {
+          currentNode.children[j] = currentNode.children[j - 1];
+        }
+        currentNode.children[childIndex + 1] = childPointer;
+
+        return -1;
+      } else { // no space
+        int[] tempValues = new int[NODESIZE + 1];
+        int[] tempChildren = new int[NODESIZE + 2];
+        int i = 0;
+        while (i < childIndex) {
+          tempValues[i] = currentNode.values[i];
+          tempChildren[i] = currentNode.children[i];
+          i++;
+        }
+        tempValues[i] = middleValue;
+        tempChildren[i] = currentNode.children[i];
+        tempChildren[i + 1] = childPointer;
+        i++;
+        while (i <= NODESIZE) {
+          tempValues[i] = currentNode.values[i - 1];
+          tempChildren[i + 1] = currentNode.children[i];
+          i++;
+        }
+
+        currentNode.size = MIDDLE;
+        int newNodeIndex = initNode();
+        Node newNode = nodes[newNodeIndex];
+        int j = 0;
+        for (i = MIDDLE + 1; i <= NODESIZE; i++) {
+          newNode.values[j] = tempValues[i];
+          newNode.children[j] = tempChildren[i];
+          j++;
+          newNode.size++;
+        }
+        newNode.children[j] = tempChildren[i];
+
+        if (pointer != root) {
+          return newNodeIndex;
+        } else {
+          int newRootIndex = initNode();
+          Node newRoot = nodes[newRootIndex];
+          newRoot.values[0] = tempValues[MIDDLE];
+          newRoot.children[0] = root;
+          newRoot.children[1] = newNodeIndex;
+          newRoot.size++;
+          root = newRootIndex;
+          return -1;
+        }
+      }
+    }
+  }
+
+  /*
+   *  find target value in a integer array
+   *  - return True if the value is found
+   */
+  private boolean findValue(int[] values, int target, int size) {
+    for(int i = 0; i < size; i++) {
+      if (values[i] == target) {
+        return true;
+      }
+      if (values[i] > target) {
+        return false;
+      }
+    }
+    return false;
   }
 
 

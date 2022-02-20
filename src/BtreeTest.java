@@ -1,3 +1,5 @@
+import java.awt.*;
+
 /*
  * CS7280 Special Topics in Database Management
  * Project 1: B-tree Test program.
@@ -12,7 +14,8 @@ public final class BtreeTest {
 
     /** Test simple string array. */
     test(new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 });
-    // test(new int[] { 10, 20, 30, 40, 50, 15, 60, 85, 95, 100, 11, 12, 13, 22, 32, 33, 34, 1, 2, 3, 4, 5, 6 });
+    test(new int[] { 10, 20, 30, 40, 50, 15, 60, 85, 95, 100, 11, 12, 13, 22, 32, 33, 34, 1, 2, 3, 4, 5, 6 });
+
 
     System.out.println("*** Finished Testing ***\n");
   }
@@ -28,7 +31,7 @@ public final class BtreeTest {
 
     System.out.println("Insert Values...");
     for(int v : values) tree.Insert(v);
-    int size = tree.cntValues();
+    int size = tree.CntValues();
     System.out.println("Stored Nodes: " + size + "\n");
 
     System.out.println("Finding Values...");
@@ -38,13 +41,13 @@ public final class BtreeTest {
 
     System.out.println("Reinsert Values... ");
     for(int v : values) tree.Insert(v);
-    System.out.println(tree.cntValues() + " stored, " + size + " expected.\n");
+    System.out.println(tree.CntValues() + " stored, " + size + " expected.\n");
 
     System.out.println("Finding Values...");
     found = 0;
     for(int v : values) if(tree.Lookup(v)) found++;
     System.out.println(found + " found, " + cntValues + " expected.\n");
 
-
+    tree.Display(0);
   }
 }
