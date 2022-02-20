@@ -69,6 +69,12 @@ final class Btree {
   }
 
   /*
+   * GetRoot()
+   *    - Returns the root of the Btree.
+   */
+  public int GetRoot() { return root; }
+
+  /*
    * Display(int node)
    *    - Display the values and children of the node
    */
@@ -270,6 +276,10 @@ final class Btree {
 
         // decrease current node's size to MIDDLE
         currentNode.size = MIDDLE;
+        // copy the sorted values into original value including the middle value which will be used after returning to upper level
+        System.arraycopy(tempValues, 0, currentNode.values, 0, MIDDLE + 1);
+        // copy children pointers into original children array
+        System.arraycopy(tempChildren, 0, currentNode.children, 0, MIDDLE + 1);
 
         // create a new node with values greater than middle value and child pointers next to middle value
         int newNodeIndex = initNode();

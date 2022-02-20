@@ -48,6 +48,6 @@ public final class BtreeTest {
     for(int v : values) if(tree.Lookup(v)) found++;
     System.out.println(found + " found, " + cntValues + " expected.\n");
 
-    tree.Display(0);
+    tree.Display(tree.GetRoot());
   }
 }
